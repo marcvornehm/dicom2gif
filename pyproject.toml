@@ -1,0 +1,31 @@
+[project]
+name = "dicom2gif"
+version = "0.0.1"
+authors = [
+    { name = "Marc Vornehm", email = "marc.vornehm@fau.de" }
+]
+description = "A tool to convert DICOM cine movies to GIF format (and others)."
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+dependencies = [
+    "numpy",
+    "Pillow>=7.0.0",
+    "pydicom",
+]
+
+[project.urls]
+Homepage = "https://github.com/marcvornehm/dicom2gif"
+Issues = "https://github.com/marcvornehm/dicom2gif/issues"
+
+[project.scripts]
+dicom2gif = "dicom2gif.__main__:main"
+
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"

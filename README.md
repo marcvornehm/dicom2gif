@@ -63,7 +63,7 @@ write_gif(cine, "output.gif", duration=50)
 
 # Directory of DICOM files
 cines = read_dir("path/to/directory")
-for path, cine in cines:
+for path, cine in cines.items():
     out_file = path.with_suffix(".apng")
     write_gif(cine, out_file, windowing="auto")
 

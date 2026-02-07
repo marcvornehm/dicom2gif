@@ -2,6 +2,7 @@ import warnings
 from pathlib import Path
 
 from .io import read_dcm, read_dir, write
+from .series import DicomSeries
 
 
 def dicom2gif(
@@ -34,22 +35,32 @@ def dicom2gif(
 
     dcm_path = Path(dcm_path)
     format = format.lower().strip(".")
-    if dcm_path.is_dir():
-        all_series = read_dir(dcm_path, pattern=pattern)
-        if len(all_series) == 0:
-            print(f"No DICOM series found.")
-            return
+    all_series: dict[Path, DicomSeries]
+
+    if dcm_path.is_file():
+        if out_file is not None:
+            out_file = Path(out_file)
+        else:
+            out_file = dcm_path.with_suffix(f".{format}")
+        series = read_dcm(dcm_path)
+        all_series = {out_file: series}
+
+    elif dcm_path.is_dir():
         if out_file is not None:
             warnings.warn(
                 "`out_file` is ignored when `dcm_path` is a directory.",
                 UserWarning,
             )
-        for path, series in all_series.items():
-            out_file = path.with_suffix(f".{format}")
-            write(series, out_file, duration=duration, windowing=windowing)
-            print(f"Wrote {out_file}")
+
+        all_series = read_dir(dcm_path, pattern=pattern)
+        if len(all_series) == 0:
+            print(f"No DICOM series found in directory {dcm_path}.")
+            return
+        all_series = {p.with_suffix(f".{format}"): s for p, s in all_series.items()}
+
     else:
-        series = read_dcm(dcm_path)
-        out_file = out_file or dcm_path.with_suffix(f".{format}")
+        raise ValueError(f"`dcm_path` must be a file or directory but was {dcm_path}")
+
+    for out_file, series in all_series.items():
         write(series, out_file, duration=duration, windowing=windowing)
         print(f"Wrote {out_file}")

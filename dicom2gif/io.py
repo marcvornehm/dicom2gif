@@ -69,6 +69,8 @@ def write(
     out_path: str | Path,
     duration: int | None = None,
     windowing: tuple[int, int] | str = "dicom",
+    frame_start: int | None = None,
+    frame_end: int | None = None,
 ) -> None:
     """Save a Dicom series as a GIF/APNG/TIFF file.
 
@@ -82,6 +84,10 @@ def write(
             center and width, 'full' for full dynamic range, or 'dicom'. If
             'dicom', uses window center and width from DICOM metadata. Defaults
             to 'dicom'.
+        frame_start (int | None): Starting frame number (1-based, inclusive) for
+            output. If None, starts from the first frame. Defaults to None.
+        frame_end (int | None): Ending frame number (1-based, inclusive) for
+            output. If None, includes frames up to the end. Defaults to None.
     """
     # Validate arguments
     if duration is not None and duration <= 0:
@@ -99,6 +105,21 @@ def write(
             f"Windowing must be 'dicom', 'full', or a tuple of (center, width) but was "
             f"{windowing}"
         )
+    if frame_start is not None and frame_start < 1:
+        raise ValueError(
+            f"frame_start must be None or a positive integer (1-based) but was "
+            f"{frame_start}"
+        )
+    if frame_end is not None and frame_end < 1:
+        raise ValueError(
+            f"frame_end must be None or a positive integer (1-based) but was "
+            f"{frame_end}"
+        )
+    if frame_start is not None and frame_end is not None and frame_start > frame_end:
+        raise ValueError(
+            f"frame_start must be less than or equal to frame_end but got "
+            f"frame_start={frame_start} and frame_end={frame_end}"
+        )
 
     # Get image data
     imgs = series.pixel_array
@@ -108,6 +129,32 @@ def write(
             "Pixel array has only two dimensions. Interpreting as a single frame.",
             UserWarning,
         )
+
+    # Apply frame slicing
+    total_frames = imgs.shape[0]
+    if frame_start is not None or frame_end is not None:
+        # Convert 1-based user input to 0-based array indices
+        start_idx = (frame_start - 1) if frame_start is not None else 0
+        end_idx = frame_end if frame_end is not None else total_frames
+
+        if start_idx >= total_frames:
+            raise ValueError(
+                f"frame_start={frame_start} is out of range for a series with "
+                f"{total_frames} frames (frames are numbered 1-{total_frames})"
+            )
+        if end_idx > total_frames:
+            warnings.warn(
+                f"frame_end={frame_end} exceeds the total number of frames "
+                f"({total_frames}). Using frame {total_frames} instead.",
+                UserWarning,
+            )
+            end_idx = total_frames
+
+        imgs = imgs[start_idx:end_idx]
+        if imgs.shape[0] == 0:
+            raise ValueError(
+                f"Frame range [frames {frame_start}-{frame_end}] resulted in no frames"
+            )
 
     # Apply windowing
     if isinstance(windowing, tuple):  # provided as argument

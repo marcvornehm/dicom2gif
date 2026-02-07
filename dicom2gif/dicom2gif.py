@@ -12,6 +12,8 @@ def dicom2gif(
     format: str = "gif",
     duration: int | None = None,
     windowing: tuple[int, int] | str = "dicom",
+    frame_start: int | None = None,
+    frame_end: int | None = None,
 ) -> None:
     """Convert DICOM series to GIF format.
     Args:
@@ -31,6 +33,10 @@ def dicom2gif(
             center and width, 'full' for full dynamic range, or 'dicom'. If
             'dicom', uses window center and width from DICOM metadata. Defaults
             to 'dicom'.
+        frame_start (int | None): Starting frame number (1-based, inclusive) for
+            output. If None, starts from the first frame. Defaults to None.
+        frame_end (int | None): Ending frame number (1-based, inclusive) for
+            output. If None, includes frames up to the end. Defaults to None.
     """
 
     dcm_path = Path(dcm_path)
@@ -62,5 +68,12 @@ def dicom2gif(
         raise ValueError(f"`dcm_path` must be a file or directory but was {dcm_path}")
 
     for out_file, series in all_series.items():
-        write(series, out_file, duration=duration, windowing=windowing)
+        write(
+            series,
+            out_file,
+            duration=duration,
+            windowing=windowing,
+            frame_start=frame_start,
+            frame_end=frame_end,
+        )
         print(f"Wrote {out_file}")

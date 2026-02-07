@@ -1,6 +1,6 @@
 [project]
 name = "dicom2gif"
-version = "1.0.0"
+version = "1.1.0"
 authors = [
     { name = "Marc Vornehm", email = "marc.vornehm@siemens-healthineers.com" }
 ]

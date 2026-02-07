@@ -1,17 +1,12 @@
-"""dicom2gif - Convert DICOM cine series to GIF format (and others)."""
-
-from .cine import Cine, CineEnhanced, CineLegacy
 from .dicom2gif import dicom2gif
-from .read import read_dcm, read_dir
-from .write import write_gif
+from .io import read_dcm, read_dir, write
+from .series import DicomSeries
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"
 __all__ = [
-    "Cine",
-    "CineEnhanced",
-    "CineLegacy",
     "dicom2gif",
     "read_dcm",
     "read_dir",
-    "write_gif",
+    "write",
+    "DicomSeries",
 ]

@@ -1,11 +1,10 @@
 # dicom2gif
 
-A Python tool to convert DICOMs of MRI cine series to GIF/APNG/TIFF format.
+A Python tool to convert DICOM series to GIF/APNG/TIFF format
 
 ## Features
 
-- Convert enhanced DICOM files (multi-frame) to GIF, APNG, or TIFF
-- Convert legacy DICOM series to GIF, APNG, or TIFF
+- Convert enhanced (multi-frame) and legacy DICOM series to GIF, APNG, or TIFF
 - Automatic detection of frame duration from DICOM metadata
 - Support for windowing (brightness/contrast) adjustment
 - Batch processing of entire directories
@@ -20,56 +19,40 @@ pip install dicom2gif
 
 ### Command Line
 
-After installation, you can use the tool in three ways:
+After installation, `dicom2gif` can be used as a command line tool.
+When given a directory, the tool will recursively search for DICOM files with the same Series Instance UID and create a separate movie file for each series.
 
 ```bash
-# As an installed script
-dicom2gif path/to/dicom/file.dcm
-
-# Using python -m
-python -m dicom2gif path/to/dicom/file.dcm
-
-# With custom output and duration
-dicom2gif input.dcm -o output.gif -d 100
+dicom2gif [-h] [-p PATTERN] [-o OUT_FILE] [-f {gif,apng,tiff}] [-d DURATION] [-w WINDOWING] dcm_path
 ```
 
-### Command Line Options
+Options:
 
 - `dcm_path`: Input DICOM file or directory
 - `-p, --pattern`: Pattern to select DICOM files when `dcm_path` is a directory (defaults to *.dcm)
 - `-o, --out_file`: Output file path (defaults to input name with .gif extension)
-- `-f, --format`: Output file format, can be gif, apng, or tiff/tif (ignored if `--out_file` is given)
+- `-f, --format`: Output file format, can be gif, apng, or tiff (ignored if `--out_file` is given)
 - `-d, --duration`: Duration per frame in milliseconds (optional, auto-detected from DICOM if available)
-- `-w, --windowing`: Can be two comma-separated integers for window center and width, 'auto' for automatic windowing to full dynamic range, or None to use windowing parameters from DICOM metadata (defaults to None)
-
-### Process a Directory
-
-When given a directory, the tool will recursively:
-- Create a separate GIF for each enhanced DICOM file
-- Create a separate GIF for each series of legacy DICOM files as determined by their Series Instance UID
-
-```bash
-dicom2gif path/to/dicom/directory
-```
+- `-w, --windowing`: Can be two comma-separated integers for window center and width, 'dicom' for windowing parameters from DICOM metadata, or 'full' for windowing to full dynamic range (defaults to 'dicom')
 
 ### Python API
 
 ```python
-from dicom2gif import dicom2gif, read_dcm, read_dir, write_gif
+from dicom2gif import dicom2gif, read_dcm, read_dir, write
 
-# Single DICOM file
-cine = read_dcm("path/to/file.dcm")
-write_gif(cine, "output.gif", duration=50)
+# Single enhanced DICOM file
+series = read_dcm("path/to/file.dcm")
+write(series, "output.gif", duration=50)
 
 # Directory of DICOM files
-cines = read_dir("path/to/directory")
-for path, cine in cines.items():
+all_series = read_dir("path/to/directory")
+for path, series in all_series.items():
     out_file = path.with_suffix(".apng")
-    write_gif(cine, out_file, windowing="auto")
+    write(series, out_file, windowing="dicom")
 
 # Or directly
 dicom2gif("path/to/file.dcm", out_file="output.gif", duration=50)
-dicom2gif("path/to/directory", format="apng", windowing="auto")
+dicom2gif("path/to/directory", format="apng", windowing="full")
 ```
 
 ## Requirements

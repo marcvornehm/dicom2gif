@@ -1,26 +1,24 @@
-"""Main entry point for the dicom2gif module."""
-
 import argparse
 
 from .dicom2gif import dicom2gif
 
 
 def windowing_argument(value: str) -> tuple[int, int] | str:
-    if value.lower() == "auto":
-        return "auto"
+    if value.lower() in ["dicom", "full"]:
+        return value.lower()
     try:
         wc, ww = map(int, value.split(","))
         return (wc, ww)
     except ValueError:
         raise argparse.ArgumentTypeError(
-            "Windowing must be 'auto' or two comma-separated integers"
+            "Windowing must be 'dicom', 'full', or two comma-separated integers"
         )
 
 
 def main() -> None:
     """Main function for CLI execution."""
     parser = argparse.ArgumentParser(
-        description="Convert DICOM cine series to GIF format."
+        description="Convert DICOM series to GIF format."
     )
     parser.add_argument(
         "dcm_path",
@@ -66,11 +64,11 @@ def main() -> None:
     parser.add_argument(
         "-w",
         "--windowing",
-        default=None,
+        default="dicom",
         type=windowing_argument,
         help="Either two comma-separated integers for window center and width or "
-        "'auto' for full dynamic range. If not provided, uses window center and width "
-        "from DICOM metadata.",
+        "'dicom' (uses window center and width from DICOM metadata) or 'full' (uses "
+        "full dynamic range) for windowing modes. Defaults to 'dicom'.",
     )
 
     args = parser.parse_args()

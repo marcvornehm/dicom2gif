@@ -68,12 +68,15 @@ def dicom2gif(
         raise ValueError(f"`dcm_path` must be a file or directory but was {dcm_path}")
 
     for out_file, series in all_series.items():
-        write(
-            series,
-            out_file,
-            duration=duration,
-            windowing=windowing,
-            frame_start=frame_start,
-            frame_end=frame_end,
-        )
-        print(f"Wrote {out_file}")
+        try:
+            write(
+                series,
+                out_file,
+                duration=duration,
+                windowing=windowing,
+                frame_start=frame_start,
+                frame_end=frame_end,
+            )
+            print(f"Wrote {out_file}")
+        except Exception as e:
+            print(f"Error writing {out_file}: {e}")

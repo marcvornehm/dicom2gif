@@ -14,6 +14,7 @@ def dicom2gif(
     windowing: tuple[int, int] | str = "dicom",
     frame_start: int | None = None,
     frame_end: int | None = None,
+    per_file: bool = False,
 ) -> None:
     """Convert DICOM series to GIF format.
     Args:
@@ -37,6 +38,9 @@ def dicom2gif(
             output. If None, starts from the first frame. Defaults to None.
         frame_end (int | None): Ending frame number (1-based, inclusive) for
             output. If None, includes frames up to the end. Defaults to None.
+        per_file (bool): If True, each DICOM file produces its own output
+            instead of grouping files by SeriesInstanceUID. Only relevant when
+            `dcm_path` is a directory. Defaults to False.
     """
 
     dcm_path = Path(dcm_path)
@@ -58,7 +62,7 @@ def dicom2gif(
                 UserWarning,
             )
 
-        all_series = read_dir(dcm_path, pattern=pattern)
+        all_series = read_dir(dcm_path, pattern=pattern, per_file=per_file)
         if len(all_series) == 0:
             print(f"No DICOM series found in directory {dcm_path}.")
             return

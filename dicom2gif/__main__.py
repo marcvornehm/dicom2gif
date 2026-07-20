@@ -108,6 +108,14 @@ def main() -> None:
         "(frame 5 only), '10-20' (frames 10 to 20), '10-' (frame 10 to end), '-20' "
         "(start to frame 20). If not provided, all frames are included.",
     )
+    parser.add_argument(
+        "--per-file",
+        action="store_true",
+        default=False,
+        dest="per_file",
+        help="Group DICOM files by file instead of SeriesInstanceUID. Only relevant "
+        "when `dcm_path` is a directory.",
+    )
 
     args = parser.parse_args()
 
@@ -122,6 +130,7 @@ def main() -> None:
         windowing=args.windowing,
         frame_start=frame_start,
         frame_end=frame_end,
+        per_file=args.per_file,
     )
 
 

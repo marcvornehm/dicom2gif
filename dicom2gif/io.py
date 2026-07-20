@@ -28,7 +28,11 @@ def read_dcm(dcm_path: str | Path) -> DicomSeries:
     return series
 
 
-def read_dir(dcm_path: str | Path, pattern: str = "*.dcm") -> dict[Path, DicomSeries]:
+def read_dir(
+    dcm_path: str | Path,
+    pattern: str = "*.dcm",
+    per_file: bool = False,
+) -> dict[Path, DicomSeries]:
     """Read DICOM series from a directory.
 
     Args:
@@ -36,6 +40,9 @@ def read_dir(dcm_path: str | Path, pattern: str = "*.dcm") -> dict[Path, DicomSe
             function reads all files matching `pattern` and groups them into
             series based on their SeriesInstanceUID.
         pattern (str): Glob pattern to match DICOM files. Defaults to '*.dcm'.
+        per_file (bool): If True, each DICOM file is returned as its own
+            DicomSeries entry instead of grouping files with the same
+            SeriesInstanceUID together. Defaults to False.
 
     Returns:
         dict[Path, DicomSeries]: A dictionary mapping the path of a
@@ -46,16 +53,20 @@ def read_dir(dcm_path: str | Path, pattern: str = "*.dcm") -> dict[Path, DicomSe
     if not dcm_path.exists() or not dcm_path.is_dir():
         raise ValueError(f"{dcm_path} must be a path to an existing directory.")
 
-    series_by_uid = defaultdict(list)
+    series_by_key = defaultdict(list)
     for dcm_file in sorted(dcm_path.rglob(pattern)):
         dcm_dset = pydicom.dcmread(dcm_file)
         sop_class = dcm_dset.SOPClassUID
         if "PresentationStateStorage" in sop_class.keyword:
             continue  # skip presentation states
-        series_by_uid[dcm_dset.SeriesInstanceUID].append((dcm_file, dcm_dset))
+        if per_file:
+            key = dcm_file
+        else:
+            key = dcm_dset.SeriesInstanceUID
+        series_by_key[key].append((dcm_file, dcm_dset))
 
     series_by_file = dict()
-    for dcm_list in series_by_uid.values():
+    for dcm_list in series_by_key.values():
         paths, dcm_dsets = zip(*dcm_list)
         main_path = sorted(paths)[0]
         series = DicomSeries(dcm_dsets)

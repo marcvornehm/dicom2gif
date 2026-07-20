@@ -1,4 +1,5 @@
 import argparse
+import logging
 
 from .dicom2gif import dicom2gif
 
@@ -116,8 +117,20 @@ def main() -> None:
         help="Group DICOM files by file instead of SeriesInstanceUID. Only relevant "
         "when `dcm_path` is a directory.",
     )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        default=False,
+        help="Enable verbose output for debugging.",
+    )
 
     args = parser.parse_args()
+
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.WARNING,
+        format="%(message)s",
+    )
 
     frame_start, frame_end = args.frames if args.frames else (None, None)
 

@@ -25,7 +25,7 @@ After installation, `dicom2gif` can be used as a command line tool.
 When given a directory, the tool will recursively search for DICOM files with the same Series Instance UID and create a separate movie file for each series.
 
 ```bash
-dicom2gif [-h] [-p PATTERN] [-o OUT_FILE] [-f {gif,apng,tiff}] [-d DURATION] [-w WINDOWING] [--frames FRAMES] [--per-file] dcm_path
+dicom2gif [-h] [-p PATTERN] [-o OUT_FILE] [-f {gif,apng,tiff}] [-d DURATION] [-w WINDOWING] [--frames FRAMES] [--per-file] [-v] dcm_path
 ```
 
 Options:
@@ -38,6 +38,7 @@ Options:
 - `-w, --windowing`: Can be two comma-separated integers for window center and width, 'dicom' for windowing parameters from DICOM metadata, or 'full' for windowing to full dynamic range (defaults to 'dicom')
 - `--frames`: Frame range (1-based, inclusive). Examples: '5' (frame 5 only), '10-20' (frames 10 to 20), '10-' (frame 10 to end), '-20' (start to frame 20).
 - `--per-file`: Produce one output file per input DICOM file instead of one per series. By default, all files sharing the same SeriesInstanceUID are merged into a single animated output. With `--per-file`, each DICOM file is converted independently.
+- `-v, --verbose`: Print debug information (windowing values, frame counts, pixel ranges, etc.).
 
 ### Python API
 

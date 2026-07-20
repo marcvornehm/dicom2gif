@@ -1,8 +1,11 @@
+import logging
 import warnings
 from pathlib import Path
 
 from .io import read_dcm, read_dir, write
 from .series import DicomSeries
+
+logger = logging.getLogger(__name__)
 
 
 def dicom2gif(
@@ -47,6 +50,15 @@ def dicom2gif(
     format = format.lower().strip(".")
     all_series: dict[Path, DicomSeries]
 
+    logger.debug("dcm_path   : %s", dcm_path)
+    logger.debug("pattern    : %s", pattern)
+    logger.debug("out_file   : %s", out_file)
+    logger.debug("format     : %s", format)
+    logger.debug("duration   : %s ms", duration)
+    logger.debug("windowing  : %s", windowing)
+    logger.debug("frame range: %s-%s", frame_start, frame_end)
+    logger.debug("per_file   : %s", per_file)
+
     if dcm_path.is_file():
         if out_file is not None:
             out_file = Path(out_file)
@@ -70,6 +82,8 @@ def dicom2gif(
 
     else:
         raise ValueError(f"`dcm_path` must be a file or directory but was {dcm_path}")
+
+    logger.debug("series found: %d", len(all_series))
 
     for out_file, series in all_series.items():
         try:

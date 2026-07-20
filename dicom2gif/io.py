@@ -1,3 +1,4 @@
+import logging
 import warnings
 from collections import defaultdict
 from pathlib import Path
@@ -7,6 +8,8 @@ import pydicom
 from PIL import Image
 
 from .series import DicomSeries
+
+logger = logging.getLogger(__name__)
 
 SUPPORTED_FORMATS = [".gif", ".apng", ".tiff", ".tif"]
 
@@ -23,8 +26,10 @@ def read_dcm(dcm_path: str | Path) -> DicomSeries:
     dcm_path = Path(dcm_path)
     if not dcm_path.exists() or not dcm_path.is_file():
         raise ValueError(f"{dcm_path} must be a path to a regular file.")
+    logger.debug("Reading file: %s", dcm_path)
     dcm_dset = pydicom.dcmread(dcm_path)
     series = DicomSeries(dcm_dset)
+    _log_series_info(series)
     return series
 
 
@@ -53,11 +58,19 @@ def read_dir(
     if not dcm_path.exists() or not dcm_path.is_dir():
         raise ValueError(f"{dcm_path} must be a path to an existing directory.")
 
+    logger.debug(
+        "Scanning directory: %s (pattern='%s', per_file=%s)",
+        dcm_path,
+        pattern,
+        per_file,
+    )
+
     series_by_key = defaultdict(list)
     for dcm_file in sorted(dcm_path.rglob(pattern)):
         dcm_dset = pydicom.dcmread(dcm_file)
         sop_class = dcm_dset.SOPClassUID
         if "PresentationStateStorage" in sop_class.keyword:
+            logger.debug("  Skipping presentation state: %s", dcm_file.name)
             continue  # skip presentation states
         if per_file:
             key = dcm_file
@@ -65,12 +78,20 @@ def read_dir(
             key = dcm_dset.SeriesInstanceUID
         series_by_key[key].append((dcm_file, dcm_dset))
 
+    logger.debug(
+        "Files read: %d, unique groups: %d",
+        sum(len(v) for v in series_by_key.values()),
+        len(series_by_key),
+    )
+
     series_by_file = dict()
     for dcm_list in series_by_key.values():
         paths, dcm_dsets = zip(*dcm_list)
         main_path = sorted(paths)[0]
         series = DicomSeries(dcm_dsets)
         series_by_file[main_path] = series
+        logger.debug("Series: %s/%s", main_path.parent.name, main_path.name)
+        _log_series_info(series)
 
     return series_by_file
 
@@ -141,6 +162,11 @@ def write(
             UserWarning,
         )
 
+    logger.debug(
+        "Pixel array shape (before slicing): %s  dtype=%s", imgs.shape, imgs.dtype
+    )
+    logger.debug("Pixel value range: min=%s, max=%s", imgs.min(), imgs.max())
+
     # Apply frame slicing
     total_frames = imgs.shape[0]
     if frame_start is not None or frame_end is not None:
@@ -170,18 +196,27 @@ def write(
     # Apply windowing
     if isinstance(windowing, tuple):  # provided as argument
         w_center, w_width = windowing
+        logger.debug(
+            "Windowing (user-provided): center=%s, width=%s", w_center, w_width
+        )
         imgs = _apply_windowing(imgs, w_center, w_width)
     elif windowing == "dicom":  # read from DICOM metadata
         windowing_dcm = series.get_windowing()
         if windowing_dcm is not None:
             w_center, w_width = windowing_dcm
+            logger.debug(
+                "Windowing (from DICOM): center=%s, width=%s", w_center, w_width
+            )
             imgs = _apply_windowing(imgs, w_center, w_width)
         else:
+            logger.debug("Windowing: no DICOM metadata found, using full dynamic range")
             warnings.warn(
                 "Could not determine windowing from DICOM metadata. Using full dynamic "
                 "range instead.",
                 UserWarning,
             )
+    else:  # windowing == "full"
+        logger.debug("Windowing: full dynamic range")
 
     # Normalize
     imgs = _normalize(imgs).astype(np.uint8)
@@ -200,6 +235,7 @@ def write(
     if duration is None:
         try:
             duration = series.get_frame_duration()
+            logger.debug("Frame duration (from DICOM): %d ms", duration)
         except AttributeError:
             warnings.warn(
                 "Frame duration is not specified and could not be determined from "
@@ -214,6 +250,17 @@ def write(
                 UserWarning,
             )
             duration = 100
+    else:
+        logger.debug("Frame duration (user-provided): %d ms", duration)
+
+    logger.debug(
+        "Writing %d frame(s) (%dx%d px) at %d ms/frame -> %s",
+        imgs.shape[0],
+        imgs.shape[2],
+        imgs.shape[1],
+        duration,
+        out_path,
+    )
 
     # Write file
     imgs_pil = [Image.fromarray(img) for img in imgs]
@@ -224,6 +271,49 @@ def write(
         duration=duration,
         loop=0,
     )
+
+
+def _log_series_info(series: DicomSeries) -> None:
+    """Log a summary of a DicomSeries at DEBUG level."""
+    if not logger.isEnabledFor(logging.DEBUG):
+        return
+    try:
+        uid = series.SeriesInstanceUID
+    except AttributeError:
+        uid = "<unknown>"
+    try:
+        modality = series.Modality
+    except AttributeError:
+        modality = "<unknown>"
+    try:
+        desc = series.SeriesDescription
+    except AttributeError:
+        desc = "<no description>"
+    try:
+        rows, cols = series.Rows, series.Columns
+        shape_str = f"{cols}x{rows}"
+    except AttributeError:
+        shape_str = "<unknown>"
+    try:
+        bits = series.BitsStored
+    except AttributeError:
+        bits = "<unknown>"
+    try:
+        n_frames = series.pixel_array.shape[0]
+    except Exception:
+        n_frames = "<unknown>"
+    windowing = series.get_windowing()
+    windowing_str = (
+        f"center={windowing[0]}, width={windowing[1]}"
+        if windowing is not None
+        else "not available"
+    )
+    logger.debug("  SeriesInstanceUID : %s", uid)
+    logger.debug("  Modality          : %s", modality)
+    logger.debug("  SeriesDescription : %s", desc)
+    logger.debug("  Image size        : %s, BitsStored=%s", shape_str, bits)
+    logger.debug("  Frames            : %s", n_frames)
+    logger.debug("  DICOM windowing   : %s", windowing_str)
 
 
 def _apply_windowing(arr: np.ndarray, center: float, width: float) -> np.ndarray:
